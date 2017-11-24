@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Document</title>
+  <style>
+    #canvas {
+      display: block;
+      margin: 0 auto;
+      background: #060631;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="canvas" width="740" height="500"></canvas>
+
+  <script>
+    var canvas = document.getElementById("canvas");
+    var context = canvas.getContext("2d");
+    var z;
+
+    var player = {
+      width: 100,
+      height: 10,
+      x: (canvas.width - 100)/2,
+      y: canvas.height - 15,
+      dx: 0,
+      lives: 3,
+      score: 0,
+      update: function() {
+        this.x += this.dx;
+      },
+      draw: function() {
+        context.fillRect(this.x,this.y,this.width,this.height);
+        context.fillText("Lives: "+this.lives,5,20);
+        context.fillText("Score: "+this.score,650,20);
+      }
+    };
+
+    var bullet = {
+      size: 10,
+      x: (canvas.width - 10)/2,
+      y: canvas.height - 25,
+      dx: 0,
+      dy: 0,
+      active: false,
+      update: function() {
+        if(!this.active) {this.dx = player.dx;}
+        this.x += this.dx;
+        this.y += this.dy;
+        if(this.x < 1 && this.dx < 0) {
+          this.dx = -this.dx;
+        }
+        if(this.x > canvas.width - this.size - 1 && this.dx > 0) {
+          this.dx = -this.dx;
+        }
+        if(this.y < 1 && this.dy < 0) {
+          this.dy = -this.dy;
+        }
+        if(this.y > canvas.height - this.size - player.height - 1 && this.dy > 0) {
+          if(this.x > player.x && this.x < player.x + player.width) {
+            this.dy = -this.dy;
+            this.dx = (player.x + player.width/2 - this.x)*0.1;
+          } else {
+            player.lives--;
+            if(player.lives === 0) {
+              showMessage("Game over",250);
+            }
+            restart();
+          }
+        }
+      },
+      draw: function() {
+        context.fillRect(this.x,this.y,this.size,this.size);
+      }
+    };
+
+    function Brick(x,y) {
+      this.width = 100;
+      this.height = 30;
+      this.x = x;
+      this.y = y;
+      this.alive = true;
+    }
+    
+    Brick.prototype.draw = function() {
+      context.fillRect(this.x,this.y,this.width,this.height);
+    };
+
+    Brick.prototype.update = function() {
+      if(bullet.y + bullet.size > this.y && bullet.y < this.y + this.height) {
+        if(bullet.x + bullet.size > this.x && bullet.x < this.x + this.width) {
+          this.setOut();
+        }
+      }
+    };
+
+    Brick.prototype.setOut = function() {
+      this.alive = false;
+      this.x = -50;
+      this.y = -50;
+      bullet.dy = -bullet.dy;
+      player.score++;
+      if(player.score === 42) {
+        showMessage("Congratulations! You win!",70);
+      }
+    };
+
+    var bricks = [];
+
+    context.fillStyle = "#2196f3";
+    context.font="20px Georgia";
+    init();
+
+    render();
+
+    function init() {
+      player.draw();
+      bullet.draw();
+      window.addEventListener("keydown",enterSpace);
+      var point1 = 5;
+      var point2 = 35;
+      for (var i = 0; i < 6; i++) {
+        for (var j = 0; j < 7; j++) {
+          var brc = new Brick(point1,point2);
+          bricks.push(brc);
+          brc.draw();
+          point1 += 105;
+        }
+        point2 += 35;
+        point1 = 5;
+      }
+    }
+
+    function update() {
+      player.update();
+      bullet.update();
+      for (var i = 0; i < 42; i++) {
+        bricks[i].update();
+      }
+    }
+
+    function draw() {
+      player.draw();
+      bullet.draw();
+      for (var i = 0; i < 42; i++) {
+          bricks[i].draw();
+      }
+    }
+
+    function render() {
+      context.clearRect(0,0,canvas.width,canvas.height);
+      update();
+      if(player.lives === 0 || player.score === 42) {return;}
+      draw();
+      z = requestAnimationFrame(render);
+    }
+
+    function restart() {
+      player.x = (canvas.width - 100)/2;
+      player.y = canvas.height - 15;
+      player.dx = 0;
+      bullet.x = (canvas.width - 10)/2;
+      bullet.y = canvas.height - 25;
+      bullet.dx = 0;
+      bullet.dy = 0;
+      bullet.active = false;
+      window.addEventListener("keydown",enterSpace);
+    }
+
+    window.onkeydown = function(e) {
+      if(e.keyCode === 37) {
+        if(player.x < 1) {
+          player.dx = 0;
+        } else {
+          player.dx = -5;
+          }
+      }
+      if(e.keyCode === 39) {
+        if(player.x > canvas.width - player.width - 1) {
+          player.dx = 0;
+        } else {
+          player.dx = 5;
+        }
+      }
+    }
+
+    function enterSpace(e) {
+      if(e.keyCode === 32) {
+        bullet.active = true;
+        bullet.dy = -2;
+        window.removeEventListener("keydown",enterSpace);
+      }
+    }
+
+    function showMessage(msg, x) {
+      context.clearRect(0,0,canvas.width,canvas.height);
+      context.fillStyle = "red";
+      context.font="50px Georgia";
+      context.fillText(msg,x,200);
+      context.fillText("Your score: " + player.score,220,280);
+      window.cancelAnimationFrame(z);
+    }
+
+    window.onkeyup = function() {
+      player.dx = 0;
+    }
+
+  </script>
+</body>
+</html>
